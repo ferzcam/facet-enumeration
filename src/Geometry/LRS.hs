@@ -132,30 +132,79 @@ getOptimumVertex mat col = trace ("Problem: " ++ show (replicate (ncols mat) (-1
  -}
 
 
+-- sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
+
+-- sortSystem mat col vertex = if length meetEq < ncols mat then error "Not enough inequalities" else trace ("SORT SYSTEM" ++ show ((,) newMat newCol ) ++ "\n\nINDICES" ++ show meetEq ++ "\n" ++ show (fromLists $ map fst ordered) ) (,) newMat newCol
+--     where
+--         matLists = toLists mat
+--         bList = concat $ toLists col
+--         meetEq = [i | i <- [0..((pred.nrows) mat)], (dot (matLists!!i) vertex) == (col^. elemAt (i,0))]
+--         pairs = safeZipWith (,) matLists bList
+--         toBeLast = map (pairs !!) meetEq
+--         ordered =  sort $ toBeLast
+--         newMat = fromLists $ map fst ordered
+--         newCol = colFromList $ (map snd ordered)
+
 sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
 
-sortSystem mat col vertex = if length meetEq < ncols mat then error "Not enough inequalities" else trace ("SORT SYSTEM" ++ show ((,) newMat newCol )) (,) newMat newCol
+sortSystem mat col vertex
+    | cols /=  (rows `div` 2) = (,) mat col
+    | otherwise = (,) (fromLists (upper ++ lower)) col
     where
         matLists = toLists mat
-        bList = concat $ toLists col
-        meetEq = [i | i <- [0..((pred.nrows) mat)], (dot (matLists!!i) vertex) == (col^. elemAt (i,0))]
-        pairs = safeZipWith (,) matLists bList
-        toBeLast = map (pairs !!) meetEq
-        ordered = (pairs \\ toBeLast) ++ (toBeLast)
-        newMat = fromLists $ map fst ordered
-        newCol = colFromList $ map snd ordered
+        
+        rows = nrows mat
+        cols = ncols mat
+
+        (up, down) = splitAt (cols-1) matLists
+        
+        candidates = map (\x -> x:up) down
+
+        chosen = fromJust $ find (\x -> detLU (fromLists x) /= 0) candidates
+
+        upper = matLists \\ chosen
+        lower = chosen
+
+-- getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
+-- getDictionary _A b vertex = trace ("In dictionary" ++ show (rows,cols, nrows dictionary, ncols dictionary) ++ show newDict) Dict [0..rows] [rows+1..rows+cols] newDict
+--     -- trace ("In dictionary" ++ show _A_B)
+--     where
+--         (newA, newb) = sortSystem _A b vertex
+--         rows = nrows newA
+--         cols = ncols newA
+--         slack = identity rows
+--        -- dictionary = newA <|> slack
+--         topRow = rowFromList $ 1 : replicate rows 0 ++  replicate cols (1)
+--         leftCol = colFromList $ replicate rows 0
+--         dictionary = topRow <-> (leftCol <|> slack <|> newA )
+
+--         -- c_B = submatrix' (0,0) (1,rows) topRow
+--         -- c_N = submatrix' (0,0) (rows+1, rows+cols) topRow
+--         -- _A_B = submatrix' (0,rows-1) (0,rows-1) dictionary
+--         -- _A_N = submatrix' (0,rows-1) (rows, rows+cols-1) dictionary
+--         _A_B = submatrix' (0,rows) (0,rows) dictionary
+--         _A_N = submatrix' (0,rows) (rows+1, rows+cols) dictionary
+--         Right invA_B = inverse _A_B
+
+--         p2 = - invA_B |*| _A_N
+--         p3 = invA_B |*| newb
+--         -- p21 = (c_N - c_B |*| invA_B |*| _A_N)
+--         -- p22 = invA_B |*| _A_N
+--         -- p31 = -c_B |*| invA_B |*| newb
+--         -- p32 = invA_B |*| newb
+--         newDict = ((identity (rows+1)) <|> p2 <|> p3)
 
 
 
 getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
-getDictionary _A b vertex = trace (show _A_B) Dict [0..rows] [rows+1..rows+cols] ((identity (rows+1)) <|> (p21 <-> p22) <|> (p31 <-> p32))
+getDictionary _A b vertex = trace ("In dictionary" ++ show (rows,cols, nrows dictionary, ncols dictionary) ++ show newDict) Dict [0..rows] [rows+1..rows+cols] newDict
     where
         (newA, newb) = sortSystem _A b vertex
         rows = nrows newA
         cols = ncols newA
         slack = identity rows
         dictionary = newA <|> slack
-        topRow = rowFromList $ 1 : replicate cols 1 ++ replicate rows 0
+        topRow = rowFromList $ 1 :  replicate rows 0 ++  replicate cols 1
         c_B = submatrix' (0,0) (1,rows) topRow
         c_N = submatrix' (0,0) (rows+1, rows+cols) topRow
         _A_B = submatrix' (0,rows-1) (0,rows-1) dictionary
@@ -166,7 +215,7 @@ getDictionary _A b vertex = trace (show _A_B) Dict [0..rows] [rows+1..rows+cols]
         p31 = -c_B |*| invA_B |*| newb
         p32 = invA_B |*| newb
 
-
+        newDict = ((identity (rows+1)) <|> (p21 <-> p22) <|> (p31 <-> p32))
 
 
 enteringVariable :: Dictionary -> Maybe Int
@@ -269,12 +318,12 @@ getVertex dictionary = concat $ toLists $ submatrix' (1,dim) (cols-1, cols-1) (d
     where
         rows = numRows dictionary
         cols = numCols dictionary
-        dim = cols-rows-1
+        dim = cols - rows - 1
 
 revSearch :: Dictionary -> [Vertex]
 revSearch dictionary@(Dict _B _N dictMatrix) -- = getVertex dictionary : concatMap revSearch pivoted
-    | (not.null) possibleRay = possibleRay ++ (concatMap revSearch pivoted)
-    | otherwise = getVertex dictionary : concatMap revSearch pivoted
+    | (not.null) possibleRay = trace ("PIVOTED2\n" ++ show pivoted) possibleRay ++ (concatMap revSearch pivoted)
+    | otherwise = trace ("PIVOTED\n" ++ show pivoted) getVertex dictionary : concatMap revSearch pivoted
     where
         rows = numRows dictionary
         cols = numCols dictionary
@@ -289,14 +338,14 @@ revSearch dictionary@(Dict _B _N dictMatrix) -- = getVertex dictionary : concatM
 
 
 hasRay :: Dictionary -> [Vertex]
-hasRay dictionary = rays
+hasRay dictionary = trace ("DIM " ++ show dim) rays
     -- | idxsPivot == Nothing = Nothing
     -- | r == 0 = Just ray
     -- | otherwise = Nothing
     where
         dictMatrix = dictionary ^. dict
         rows = numRows dictionary
-        dim = cols - rows -1
+        dim = cols - rows - 1
         cols = numCols dictionary
         nonPositive column = all (<=0) ((concat.toLists) column)
         colsWithRays = if dim+1 == rows then
@@ -312,7 +361,7 @@ lrs matrix b vertex = (sort.nub) $ revSearch dictionary
         dictionary = getDictionary matrix b vertex
 
 
--- Transforms a V polytope into a H pointed cone
+-- | Transforms a V polytope into a H pointed cone
 polytope2LiftedCone :: [Vertex] -> (Matrix Rational, Col)
 polytope2LiftedCone points = (colOnes <|> hMatrix , colZeros)
     where
@@ -321,7 +370,7 @@ polytope2LiftedCone points = (colOnes <|> hMatrix , colZeros)
         hMatrix = fromLists points
         colZeros = colFromList $ replicate nrows 0
 
--- Transforms a V pointed cone into a H polyotpe
+-- | Transforms a V pointed cone into a H polyotpe
 liftedCone2polyotpe :: [Vertex] -> (Matrix Rational, Col)
 liftedCone2polyotpe points = (hMatrix, b)
     where
@@ -336,3 +385,4 @@ lrsFacetEnumeration points = hPolytope
         hLiftedCone@(matrix, b) = polytope2LiftedCone points
         vLiftedCone = lrs matrix b initialVertex
         hPolytope = liftedCone2polyotpe vLiftedCone
+
