@@ -17,8 +17,8 @@ main = defaultMain [
     bgroup "4-Cube" [
         bench "Yang" $ whnf facetEnumeration     _4Cube,   
         bench "LRS"  $ whnf lrsFacetEnumeration  _4Cube],
-
-    bgroup "4-Cube" [
-        bench "Yang" $ whnf facetEnumeration     _4Cube,   
-        bench "LRS"  $ whnf lrsFacetEnumeration  _4Cube]
+        
+    bgroup "Octahedron" [
+        bench "Yang" $ whnf facetEnumeration     octahedron,   
+        bench "LRS"  $ whnf lrsFacetEnumeration  octahedron]
     ] 

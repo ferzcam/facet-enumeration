@@ -19,9 +19,8 @@ testLRSFacetEnumeration :: TestTree
 testLRSFacetEnumeration = HU.testCase "Test for facet enumeration using LRS" $ do
         sortOutput (lrsFacetEnumeration triangle)    @?= sort (multiplyBy (-1/3)  resTr)
         sortOutput (lrsFacetEnumeration _3Cube  )    @?= sort (multiplyBy (-1)    res3C)
-        sortOutput (lrsFacetEnumeration _4Cube  )    @?= sort (multiplyBy (-1/2)  res4C)
-        sortOutput (lrsFacetEnumeration lrsPaper)    @?= sort (multiplyBy (1/2)  resLrs)
-  
+        sortOutput (lrsFacetEnumeration _4Cube  )    @?= sort (multiplyBy (-1/2)    res4C)
+        sortOutput (lrsFacetEnumeration octahedron)  @?= sort (multiplyBy (-1/2)    resOct)
 
 testsLRS :: TestTree
 testsLRS = testGroup "Test for LRS version" [testLRSFacetEnumeration] 

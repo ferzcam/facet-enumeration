@@ -16,6 +16,11 @@ sortOutput (mat, vec) = sort $ zip matLists vecList
         vecList  = head $ toLists $ transpose vec
 
 -------------------------------------
+octahedron  = [[0, 0, 1],[-1, 0, 0],[0, -1, 0],[1, 0, 0],[0, 1, 0],[0, 0, -1]]
+hyperOct    = [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1], [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1]]  :: [[Rational]]
+bOct        = [1, 1, 1, 1, 1, 1, 1, 1] :: [Rational]
+resOct      = zip hyperOct bOct
+-------------------------------------
 triangle    = [[0,0],[3,0],[0,3]]
 hyperTr     = [[0,-1], [-1,0], [1,1]]   :: [[Rational]]
 bTr         = [0,0,3]                   :: [Rational]
