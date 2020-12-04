@@ -20,5 +20,9 @@ main = defaultMain [
         
     bgroup "Octahedron" [
         bench "Yang" $ whnf facetEnumeration     octahedron,   
-        bench "LRS"  $ whnf lrsFacetEnumeration  octahedron]
+        bench "LRS"  $ whnf lrsFacetEnumeration  octahedron],
+    
+    bgroup "Cross-Polytope" [
+        bench "Yang" $ whnf facetEnumeration     _crossPolytope,   
+        bench "LRS"  $ whnf lrsFacetEnumeration  _crossPolytope]
     ] 
