@@ -24,6 +24,7 @@ testFacetEnum =   HU.testCase "Tests for facet enumeration algorithm" $ do
     sort (proj $ facetEnumeration triangle) @?= sort resTr
     sort (proj $ facetEnumeration _3Cube)   @?= (sort $ multiplyBy 2 res3C)
     sort (proj $ facetEnumeration _4Cube)   @?= (sort $ res4C)
+    sort (proj $ facetEnumeration octahedron) @?= (sort $ resOct)
 
 
 testsFacet :: TestTree
