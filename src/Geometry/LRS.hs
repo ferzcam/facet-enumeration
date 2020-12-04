@@ -3,6 +3,7 @@
 module Geometry.LRS where
 
 import Geometry.Vertex
+import Geometry.Matrix
 
 import Data.Matrix hiding (trace)
 import qualified Data.Vector as V
@@ -112,7 +113,7 @@ mapRow' f row m
 
 
 getOptimumVertex :: Matrix Rational -> Col -> Maybe Vertex
-getOptimumVertex mat col = trace ("Problem: " ++ show (replicate (ncols mat) (-1))  ++ "\n\n Result :" ++ show result ) fmap (map toRational) $ feasNOpt result
+getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
     where
         problem = Maximize $ replicate (ncols mat) (-1)
         constraints = Dense $ safeZipWith (:<=:) (map (map fromRational) $ toLists mat) (map fromRational $ concat $ toLists col)
@@ -145,26 +146,20 @@ getOptimumVertex mat col = trace ("Problem: " ++ show (replicate (ncols mat) (-1
 --         newMat = fromLists $ map fst ordered
 --         newCol = colFromList $ (map snd ordered)
 
-sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
+-- sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
 
-sortSystem mat col vertex
-    | cols /=  (rows `div` 2) = (,) mat col
-    | otherwise = (,) (fromLists (upper ++ lower)) col
-    where
-        matLists = toLists mat
+-- sortSystem mat col vertex
+--     | cols /=  (rows `div` 2) = (,) mat col
+--     | otherwise = (trace $ show $ fromLists (upper ++ lower)) (,) (fromLists (upper ++ lower)) col
+--     where
+--         matLists = toLists mat
         
-        rows = nrows mat
-        cols = ncols mat
-
-        (up, down) = splitAt (cols-1) matLists
+--         rows = nrows mat
+--         cols = ncols mat
+--         slackMatr = submatrix' (0,rows-1) (0, rows - cols -2) $ identity rows
+--         lower  = getIndependent matLists [] 0 rows slackMatr
+--         upper = matLists \\ lower
         
-        candidates = map (\x -> x:up) down
-
-        chosen = fromJust $ find (\x -> detLU (fromLists x) /= 0) candidates
-
-        upper = matLists \\ chosen
-        lower = chosen
-
 -- getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
 -- getDictionary _A b vertex = trace ("In dictionary" ++ show (rows,cols, nrows dictionary, ncols dictionary) ++ show newDict) Dict [0..rows] [rows+1..rows+cols] newDict
 --     -- trace ("In dictionary" ++ show _A_B)
@@ -197,9 +192,10 @@ sortSystem mat col vertex
 
 
 getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
-getDictionary _A b vertex = trace ("In dictionary" ++ show (rows,cols, nrows dictionary, ncols dictionary) ++ show newDict) Dict [0..rows] [rows+1..rows+cols] newDict
+getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
     where
-        (newA, newb) = sortSystem _A b vertex
+        -- (newA, newb) = sortSystem _A b vertex
+        (newA, newb) = (,) _A b
         rows = nrows newA
         cols = ncols newA
         slack = identity rows
@@ -322,8 +318,8 @@ getVertex dictionary = concat $ toLists $ submatrix' (1,dim) (cols-1, cols-1) (d
 
 revSearch :: Dictionary -> [Vertex]
 revSearch dictionary@(Dict _B _N dictMatrix) -- = getVertex dictionary : concatMap revSearch pivoted
-    | (not.null) possibleRay = trace ("PIVOTED2\n" ++ show pivoted) possibleRay ++ (concatMap revSearch pivoted)
-    | otherwise = trace ("PIVOTED\n" ++ show pivoted) getVertex dictionary : concatMap revSearch pivoted
+    | (not.null) possibleRay = possibleRay ++ (concatMap revSearch pivoted)
+    | otherwise = getVertex dictionary : concatMap revSearch pivoted
     where
         rows = numRows dictionary
         cols = numCols dictionary
@@ -338,7 +334,7 @@ revSearch dictionary@(Dict _B _N dictMatrix) -- = getVertex dictionary : concatM
 
 
 hasRay :: Dictionary -> [Vertex]
-hasRay dictionary = trace ("DIM " ++ show dim) rays
+hasRay dictionary = rays
     -- | idxsPivot == Nothing = Nothing
     -- | r == 0 = Just ray
     -- | otherwise = Nothing
@@ -377,9 +373,10 @@ liftedCone2polyotpe points = (hMatrix, b)
         b = colFromList $ map (negate.head) points
         hMatrix = fromLists $ map tail points 
     
-lrsFacetEnumeration :: [Vertex] -> (Matrix Rational, Col)
-lrsFacetEnumeration points = hPolytope
+lrsFacetEnumeration :: [IVertex] -> (Matrix Rational, Col)
+lrsFacetEnumeration ipoints = hPolytope
     where
+        points =  map (map toRational) ipoints
         cols = length (points!!0)
         initialVertex = replicate (cols + 1) 0
         hLiftedCone@(matrix, b) = polytope2LiftedCone points

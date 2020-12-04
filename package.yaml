@@ -23,6 +23,8 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - lens
+- hmatrix
+
 
 library:
   source-dirs: src
@@ -48,3 +50,19 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - facet-enumeration
+
+benchmarks:
+  facet-enumeration-benchmarks:
+    source-dirs: benchmark
+    main: Main.hs
+    dependencies:
+    - base
+    - facet-enumeration
+    - matrix
+    - criterion
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    benchmark-opts:
+      benchmark-arguments: "--output bench.html"

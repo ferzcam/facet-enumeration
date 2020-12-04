@@ -124,6 +124,8 @@ goDeep adjacency dim b@(x:xs)
 --                 varsEnabled = [i | i <- [0..(dim-1)], (fromJust chosenPoint)!!i /= 0]
 --                 newBools = foldr (\i acc -> acc & element i .~ True) bools varsEnabled
 
+
+-- TO CHECK, not complete
 isEmbedded :: [IVertex] -> Bool
 isEmbedded vertices
     | all (==0) (map last vertices) = True 
@@ -208,7 +210,7 @@ checkBranch ::
 checkBranch dictIndexVertex ui embedded branch (facets, hyperplanes)
     | hyper == Nothing = (facets, hyperplanes)
     | otherwise =
-        if (not.(elem hyper)) hyperplanes && all (<= pure 1) equation12 && (((fmap dot hyper) <*> (pure ui)) > pure 0 || embedded)
+        if (not.(elem hyper)) hyperplanes && all (<= pure 1) equation12 && (((fmap dot hyper) <*> (pure ui)) > pure 0) -- || isEmbedded
         then ((complete branch):facets,hyper:hyperplanes)
         else  (facets,hyperplanes)
         where
