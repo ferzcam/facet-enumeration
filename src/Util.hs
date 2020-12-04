@@ -149,9 +149,9 @@ line p v
 
 
 getParameter ::
-        [Rational]  -- | Point from which the ray emanates
-    ->  [Integer]  -- | Emanating vector
-    ->  [Rational]  -- | Point to evaluate
+        [Rational] -- ^ Point from which the ray emanates
+    ->  [Integer]  -- ^ Emanating vector
+    ->  [Rational]  -- ^ Point to evaluate
     ->  Rational
 getParameter p v x
     | length p /= length v = error "getParameter: Points must have de the same dimension in order to construct the line between them."

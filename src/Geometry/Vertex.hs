@@ -49,6 +49,7 @@ isExtremeVertex point set = feasibleNNegative objectiveFunc constraintsLeft cons
         constraintsRight = (replicate (length set2) 0)
 
 
+-- | Given a set of vertices, returns the vertices corresponding to the convex hull of the set.
 extremalVertices :: [IVertex] -> [IVertex]
 extremalVertices set = filter (\x -> isExtremeVertex x set) set
 
@@ -67,7 +68,7 @@ feasibleNNegative objectiveFunc constraintsLeft constraintsRight = feasNOpt resu
 
 
 -- | Decides whether two points form a 1-face or not.
--- | -- | This function is based on LP5 of the article "Linear Programming Approaches to the Convex Hull Problem in R^m"
+-- | This function is based on LP5 of the article "Linear Programming Approaches to the Convex Hull Problem in R^m"
 
 isOneFace :: (Num a, Enum a, Real a) => [a] -> [a] -> [[a]] -> Bool
 isOneFace xi xj set = feasibleNNegative2 objectiveFunc constraintsLeft constraintsRight
@@ -111,7 +112,7 @@ adjacencyMatrix set = foldr insertNeighbors (zero nPoints nPoints) pairs
                 i = fromJust $ MS.lookup ui dictVertexIdx
                 j = fromJust $ MS.lookup uj dictVertexIdx
 
-
+-- | Transforms a rational vector into an integer one maintaining the proportionality.
 standard :: Vertex -> IVertex
 standard v = map (numerator . (/commDiv)) noRational 
     where

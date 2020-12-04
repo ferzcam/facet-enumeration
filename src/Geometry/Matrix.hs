@@ -1,6 +1,12 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances#-}
 
-module Geometry.Matrix where
+module Geometry.Matrix 
+(
+    -- * Functions
+    getIndependent
+)
+
+where
     
 import Numeric.LinearAlgebra.HMatrix
 import qualified Data.Matrix as M
@@ -22,6 +28,7 @@ import Data.Function
 --             matrix =  fromLists $ zipRev ((map (map fromRational)) setVectors :: [[Double]]) (slack)
 --             newRank = rank matrix
 
+-- | Get independet rows/columns of a non square matrix
 getIndependent :: [[Rational]] -> [[Rational]] -> Int -> Int -> M.Matrix Rational-> [[Rational]]
 getIndependent initial accum currRank maxRank slackMat
     | currRank == maxRank = accum

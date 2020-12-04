@@ -1,5 +1,19 @@
 module Geometry.Facet 
 
+(
+    -- * Types
+    Branch,
+    Facet,
+    Hyperplane,
+    -- * Functions
+    centroid,
+    toOrigin,
+    computeHyperplane,
+    facetEnumeration
+)
+
+
+
 
 where
 
@@ -20,20 +34,27 @@ import  qualified Data.Vector as V
 -- | Module that implements functions for facet enumeration. Based on the artcile written by Yaguang Yang: A Facet Enumeration Algorithm for Convex Polytopes. 
 
 
+-- | Given a polytope, a branch is defined as a path between to vertices. The vertices are represented by integer labels.
 type Branch = [Int]
+
+-- | Given a polytope, a facet is represented by the set of labels that belongs to it. The vertices are represented by integer labels.
 type Facet = [Int]
+
+-- | Represents the algebraic part of a hyperplane using arbitrary precision rationals.
 type Hyperplane = [Rational]
 
 
 remove :: Eq a => a -> [a] -> [a]
 remove elem = (delete elem).nub
 
+-- | Computes the centroid of a set of integer vertices.
 centroid :: [IVertex] -> Vertex
 centroid set = let 
                     n = fromIntegral $ length set 
                     fractionalSet = map (map toRational) set 
                 in map (/n) (foldr1 (safeZipWith (+)) fractionalSet)
 
+-- | Centers the polyhedron in the origin of the ambient space.
 toOrigin :: [IVertex] -> [Vertex]
 toOrigin set = let 
                     fractionalSet = map (map toRational) set 
@@ -41,10 +62,10 @@ toOrigin set = let
                 in map ($-$ center) fractionalSet
 
 
-
+-- | Given d d-dimensional vertices, computes the hyperplane that those vertices generate.
 computeHyperplane ::
-    [Vertex] ->    -- | Set of d d-dimensional vertices.Thus the matrix is square
-    (Maybe Hyperplane, Bool)         -- | (Possible hyperplane, Flag indicating in which way the hyperplane was computed)
+       [Vertex]    -- ^ Set of d d-dimensional vertices.Thus the matrix is square
+    -> (Maybe Hyperplane, Bool)         -- ^ (Possible hyperplane, Flag indicating in which way the hyperplane was computed)
 computeHyperplane [] = (Nothing, False)
 computeHyperplane vertices =    if linearSystem /= Nothing 
                                 then (linearSystem, False) 
@@ -180,14 +201,13 @@ facetEnumeration' vertices  =  safeZipWith3 (,,) newFacetsVertex cleanedHypers b
 
 
 checkVertex ::
-    MS.Map Int Vertex ->    -- ^ dictionany of indices and vertices
-    MS.Map Vertex Int ->    -- ^ dictionany of vertices and indices
-    Bool ->                 -- ^ if the polyhedron has lower dimension than the ambient space
-    Vertex ->               -- ^ vertex to check
-    (AdjacencyMatrix,       -- ^ adjacency matrix 
-    [Facet],                 -- ^ set of facets
-    [Maybe Hyperplane]) ->        -- ^ set of hyperplanes
-    (AdjacencyMatrix, [Facet], [Maybe Hyperplane])  -- ^ resulting tuple (adjacency,facets, hyperplanes)
+        MS.Map Int Vertex       -- ^ dictionany of indices and vertices
+    ->  MS.Map Vertex Int       -- ^ dictionany of vertices and indices
+    ->  Bool                    -- ^ if the polyhedron has lower dimension than the ambient space
+    ->  Vertex                  -- ^ vertex to check
+    ->  (AdjacencyMatrix,      
+        [Facet],                
+        [Maybe Hyperplane])         ->  (AdjacencyMatrix, [Facet], [Maybe Hyperplane])  -- ^ resulting tuple (adjacency,facets, hyperplanes)
 checkVertex dictIndexVertex dictVertexIndex embedded ui (adjacency, facets, hyperplanes) = joinTuple adjacency $ foldr (checkBranch dictIndexVertex ui embedded) (facets, hyperplanes) branches
     where
         idx = fromJust $ MS.lookup ui dictVertexIndex
@@ -200,17 +220,17 @@ checkVertex dictIndexVertex dictVertexIndex embedded ui (adjacency, facets, hype
 
 
 checkBranch ::
-    MS.Map Int Vertex ->    -- ^ dictionary of indices and vertices
-    Vertex ->          -- ^ vertex ui that will be the root
-    Bool ->                 -- ^ if the polyhedron has lower dimension than the ambient space
-    Branch ->   -- ^ branch under ui
-    ([Facet],          -- ^ set of facets
-    [Maybe Hyperplane]) ->       -- ^ set of hyperplanes
-    ([Facet], [Maybe Hyperplane])  -- ^ resulting tuple (facets, hyperplanes)
+        MS.Map Int Vertex    -- ^ dictionary of indices and vertices
+    ->  Vertex          -- ^ vertex ui that will be the root
+    ->  Bool                  -- ^ if the polyhedron has lower dimension than the ambient space
+    ->  Branch    -- ^ branch under ui
+    -> ([Facet],          
+    [Maybe Hyperplane])       
+    -> ([Facet], [Maybe Hyperplane])  -- ^ resulting tuple (facets, hyperplanes)
 checkBranch dictIndexVertex ui embedded branch (facets, hyperplanes)
     | hyper == Nothing = (facets, hyperplanes)
     | otherwise =
-        if (not.(elem hyper)) hyperplanes && all (<= pure 1) equation12 && (((fmap dot hyper) <*> (pure ui)) > pure 0) -- || isEmbedded
+        if (not.(elem hyper)) hyperplanes && all (<= pure 1) equation12 && (((fmap dot hyper) <*> (pure ui)) > pure 0) 
         then ((complete branch):facets,hyper:hyperplanes)
         else  (facets,hyperplanes)
         where

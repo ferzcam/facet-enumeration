@@ -21,9 +21,10 @@ proj = map (\(_,b,c) -> (b,c))
 
 testFacetEnum :: TestTree
 testFacetEnum =   HU.testCase "Tests for facet enumeration algorithm" $ do
-    sort (proj $ facetEnumeration triangle) @?= sort resTr
-    sort (proj $ facetEnumeration _3Cube)   @?= (sort $ multiplyBy 2 res3C)
-    sort (proj $ facetEnumeration _4Cube)   @?= (sort $ res4C)
+    sort (proj $ facetEnumeration triangle)     @?= sort resTr
+    sort (proj $ facetEnumeration _3Cube)       @?= (sort $ multiplyBy 2 res3C)
+    sort (proj $ facetEnumeration _4Cube)       @?= (sort $ res4C)
+   -- sort (proj $ facetEnumeration lrsPaper)     @?= (sort $ multiplyBy (-5/4) resLrs)
 
 
 testsFacet :: TestTree

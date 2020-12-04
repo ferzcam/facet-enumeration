@@ -1,6 +1,20 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
 
-module Geometry.LRS where
+module Geometry.LRS (
+    -- * Types
+    Dictionary,
+    -- * Functions
+    getDictionary,
+    selectPivot,
+    reverseRS,
+    lrs,
+    polytope2LiftedCone,
+    liftedCone2polyotpe,
+    lrsFacetEnumeration,
+
+    colFromList
+    )   
+ where
 
 import Geometry.Vertex
 import Geometry.Matrix
@@ -45,10 +59,10 @@ rowFromList = rowVector . V.fromList
 
 -- | Wrapper of submatrix function. This function works for indices starting from 0 rather than 1 in the submatrix function
 submatrix' :: 
-    (Int, Int) ->   -- ^ Rows indices
-    (Int, Int) ->   -- ^ Cols indices
-    Matrix a ->
-    Matrix a
+    (Int, Int)      -- ^ Rows indices
+    -> (Int, Int)   -- ^ Cols indices
+    -> Matrix a
+    -> Matrix a
 submatrix' (ro,rk) (co,ck) m = submatrix (ro+1) (rk+1) (co+1) (ck+1) m
 
 
@@ -190,7 +204,7 @@ getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
 --         newDict = ((identity (rows+1)) <|> p2 <|> p3)
 
 
-
+-- | Constructs initial dictionary given a set of inequalities and an optimum initial vertex
 getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
 getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
     where
@@ -212,7 +226,6 @@ getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
         p32 = invA_B |*| newb
 
         newDict = ((identity (rows+1)) <|> (p21 <-> p22) <|> (p31 <-> p32))
-
 
 enteringVariable :: Dictionary -> Maybe Int
 enteringVariable dictionary
@@ -240,7 +253,7 @@ lexMinRatio dictionary s
         ratios = safeZipWith (map $) (map ((flip (/)) . snd) indexed_s) sub_D
 
 
-
+-- | Selects entering and leaving variables for the next pivot in the dictionary
 selectPivot :: Dictionary -> Maybe (Int, Int)
 selectPivot dictionary
     | s == Nothing = Nothing
@@ -271,11 +284,11 @@ simplex dictionary
         idxsToPivot = selectPivot dictionary
 
 
-
+-- | Reverse search.
 reverseRS :: 
-    Dictionary -> 
-    Int ->          -- element in N
-    Maybe Int
+        Dictionary 
+    ->  Int          -- ^ element in N
+    ->  Maybe Int
 reverseRS dictionary v
     | conditions == False = Nothing
     | conditions == True = Just u
@@ -335,9 +348,9 @@ revSearch dictionary@(Dict _B _N dictMatrix) -- = getVertex dictionary : concatM
 
 hasRay :: Dictionary -> [Vertex]
 hasRay dictionary = rays
-    -- | idxsPivot == Nothing = Nothing
-    -- | r == 0 = Just ray
-    -- | otherwise = Nothing
+    -- idxsPivot == Nothing = Nothing
+    -- r == 0 = Just ray
+    -- otherwise = Nothing
     where
         dictMatrix = dictionary ^. dict
         rows = numRows dictionary
@@ -350,7 +363,7 @@ hasRay dictionary = rays
         rays =  map (concat . toLists . (submatrix' (1,dim) (0,0))) colsWithRays
 
 
-
+-- | Implementation of Lexicographic Reverse Search
 lrs :: Matrix Rational -> Col -> Vertex-> [Vertex]
 lrs matrix b vertex = (sort.nub) $ revSearch dictionary
     where
@@ -373,6 +386,7 @@ liftedCone2polyotpe points = (hMatrix, b)
         b = colFromList $ map (negate.head) points
         hMatrix = fromLists $ map tail points 
     
+-- | Implementation of Lexicographic Reverse Search for Facet Enumeration
 lrsFacetEnumeration :: [IVertex] -> (Matrix Rational, Col)
 lrsFacetEnumeration ipoints = hPolytope
     where
