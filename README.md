@@ -1,4 +1,4 @@
-# facet-eumeration
+# facet-enumeration
 
 
 # To run benchmark with report

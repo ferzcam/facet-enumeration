@@ -131,3 +131,30 @@ bCross = [
         1
     ] :: [Rational]
 resCross       = zip hyperCross bCross 
+
+----------------------------------------
+
+lrsPaper = [
+    [ 1, 1, 0],
+    [-1, 1, 0],
+    [ 1,-1, 0],
+    [-1,-1, 0],
+    [ 0, 0,-1]
+    ]
+
+hyperLrs = [
+    [-1, 0, 1],
+    [ 0,-1, 1],
+    [ 0, 0,-2],
+    [ 0, 1, 1],
+    [ 1, 0, 1]] :: [[Rational]]
+
+bLrs = [
+    -1,
+    -1,
+     0,
+    -1,
+    -1
+    ] :: [Rational]
+
+resLrs = zip hyperLrs bLrs

@@ -11,11 +11,13 @@ version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/tropical-group/facet-enumeration#readme>
 homepage:       https://github.com/tropical-group/facet-enumeration
 bug-reports:    https://github.com/tropical-group/facet-enumeration/issues
-author:         Fernando Zhapa
+author:         Fernando Zhapa, Julio Rey, Matheus Medeiros de Souza
 maintainer:     ferynando7@gmail.com
 copyright:      2020 Fernando Zhapa
 license:        BSD3
 license-file:   LICENSE
+category:       Computational Geometry
+synopsis:       Implementations of algorithms for the facet enumeration problem
 build-type:     Simple
 extra-source-files:
     README.md

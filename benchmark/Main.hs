@@ -24,5 +24,9 @@ main = defaultMain [
     
     bgroup "Cross-Polytope" [
         bench "Yang" $ whnf facetEnumeration     _crossPolytope,   
-        bench "LRS"  $ whnf lrsFacetEnumeration  _crossPolytope]
+        bench "LRS"  $ whnf lrsFacetEnumeration  _crossPolytope],
+
+    bgroup "Pyramid" [
+        bench "Yang" $ whnf facetEnumeration     lrsPaper,   
+        bench "LRS"  $ whnf lrsFacetEnumeration  lrsPaper]
     ] 
