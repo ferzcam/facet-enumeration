@@ -27,6 +27,7 @@ import Util
 import Control.Lens 
 import Debug.Trace
 import Numeric.LinearProgramming hiding (simplex)
+import Numeric.LinearAlgebra.HMatrix
 import Data.List
 
 type Row = Matrix Rational
@@ -147,19 +148,11 @@ getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
  -}
 
 
--- sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
+checkNewColumn :: Matrix Double -> (Matrix Double, Matrix Double) -> (Matrix Double, Matrix Double)
+checkNewColumn matrix basic cobasic
 
--- sortSystem mat col vertex = if length meetEq < ncols mat then error "Not enough inequalities" else trace ("SORT SYSTEM" ++ show ((,) newMat newCol ) ++ "\n\nINDICES" ++ show meetEq ++ "\n" ++ show (fromLists $ map fst ordered) ) (,) newMat newCol
---     where
---         matLists = toLists mat
---         bList = concat $ toLists col
---         meetEq = [i | i <- [0..((pred.nrows) mat)], (dot (matLists!!i) vertex) == (col^. elemAt (i,0))]
---         pairs = safeZipWith (,) matLists bList
---         toBeLast = map (pairs !!) meetEq
---         ordered =  sort $ toBeLast
---         newMat = fromLists $ map fst ordered
---         newCol = colFromList $ (map snd ordered)
-
+sortSystem :: Matrix Rational -> [Int]
+sortSystem matrix 
 -- sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
 
 -- sortSystem mat col vertex
@@ -209,6 +202,8 @@ getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
 getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
     where
         -- (newA, newb) = sortSystem _A b vertex
+        initialDict = _A <|> slack
+        (basic, cobasic) = sortSystem initialDict
         (newA, newb) = (,) _A b
         rows = nrows newA
         cols = ncols newA

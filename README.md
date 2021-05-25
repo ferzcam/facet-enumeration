@@ -1,3 +1,6 @@
+# Dependencies
+    sudo apt-get install glpk-utils libglpk-dev glpk-doc
+
 # facet-enumeration
 
 
