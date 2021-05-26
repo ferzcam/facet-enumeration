@@ -148,11 +148,26 @@ getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
  -}
 
 
-checkNewColumn :: Matrix Double -> (Matrix Double, Matrix Double) -> (Matrix Double, Matrix Double)
-checkNewColumn matrix basic cobasic
+findBasis :: (Maybe (Matrix Rational), Maybe (Matrix Rational)) -> Matrix Rational -> Int -> (Maybe (Matrix Rational), Maybe (Matrix Rational))
+findBasis (basic, cobasic) original colNum
+    | colNum > cols = (basic, cobasic)
+    | currRank == candRank = findBasis (basic, newCobasic) original (colNum + 1)
+    | currRank < candRank = findBasis (newBasic, cobasic) original (colNum + 1)
+    where
+        rows = nrows 
+        cols = ncols 
+        currRank = rank basic
+        candVec = original ^. colAt colNum
+        candMat = basic <|> candVec
+        candRank = rank candMat
 
-sortSystem :: Matrix Rational -> [Int]
-sortSystem matrix 
+        newBasic = if isNothing basic then candVec else basic <|> candVec
+        newCobasic = if isNothing cobasic then candVec else cobasic <|> candVec
+
+
+
+sortSystem :: Matrix Rational -> (Matrix Rational, Matrix Rational) 
+sortSystem matrix = (,) <$> (fromJust . fst) <*> (fromJust . snd) (findBasis (Nothing, Nothing) matrix 0)
 -- sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
 
 -- sortSystem mat col vertex
