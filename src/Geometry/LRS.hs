@@ -19,7 +19,7 @@ module Geometry.LRS (
 import Geometry.Vertex
 import Geometry.Matrix
 
-import Data.Matrix hiding (trace)
+import Data.Matrix as M hiding (trace)
 import qualified Data.Vector as V
 import Data.Maybe
 import Data.List
@@ -27,16 +27,16 @@ import Util
 import Control.Lens 
 import Debug.Trace
 import Numeric.LinearProgramming hiding (simplex)
-import Numeric.LinearAlgebra.HMatrix
+import Numeric.LinearAlgebra.HMatrix as HM
 import Data.List
 
-type Row = Matrix Rational
-type Col = Matrix Rational
+type Row = M.Matrix Rational
+type Col = M.Matrix Rational
 
 data Dictionary = Dict {
                             __B :: [Int], 
                             __N :: [Int], 
-                            _dict :: Matrix Rational
+                            _dict :: M.Matrix Rational
                         } 
     deriving (Show, Eq)
 
@@ -52,30 +52,30 @@ numCols dictionary = ncols $ dictionary^.dict
 (|*|) = multStrassen
 
 
-colFromList :: [a] -> Matrix a
+colFromList :: [a] -> M.Matrix a
 colFromList = colVector . V.fromList
 
-rowFromList :: [a] -> Matrix a
+rowFromList :: [a] -> M.Matrix a
 rowFromList = rowVector . V.fromList
 
 -- | Wrapper of submatrix function. This function works for indices starting from 0 rather than 1 in the submatrix function
 submatrix' :: 
     (Int, Int)      -- ^ Rows indices
     -> (Int, Int)   -- ^ Cols indices
-    -> Matrix a
-    -> Matrix a
+    -> M.Matrix a
+    -> M.Matrix a
 submatrix' (ro,rk) (co,ck) m = submatrix (ro+1) (rk+1) (co+1) (ck+1) m
 
 
 
 -- | Lens for columns
-colAt :: Int -> Lens' (Matrix Rational) Col
+colAt :: Int -> Lens' (M.Matrix Rational) Col
 colAt j = lens (getCol' j) (\m c -> setCol' j c m)
 
-getCol' :: Int -> Matrix a -> Matrix a
+getCol' :: Int -> M.Matrix a -> M.Matrix a
 getCol' idx = colVector . (getCol (idx+1))
 
-setCol' :: Int -> Col -> Matrix Rational -> Matrix Rational
+setCol' :: Int -> Col -> M.Matrix Rational -> M.Matrix Rational
 setCol' idx col mat 
     | idx == 0 = col <|> right
     | idx == (ncols mat) - 1 = left <|> col
@@ -85,13 +85,13 @@ setCol' idx col mat
         right = submatrix' (0,(nrows mat)-1) (idx+1, (ncols mat)-1) mat
 
 -- | Lens for rows
-rowAt :: Int -> Lens' (Matrix Rational) Row
+rowAt :: Int -> Lens' (M.Matrix Rational) Row
 rowAt i = lens (getRow' i) (\m r -> setRow' i r m)
 
-getRow' :: Int -> Matrix a -> Matrix a
+getRow' :: Int -> M.Matrix a -> M.Matrix a
 getRow' idx = rowVector . (getRow (idx+1))
 
-setRow' :: Int -> Col -> Matrix Rational -> Matrix Rational
+setRow' :: Int -> Col -> M.Matrix Rational -> M.Matrix Rational
 setRow' idx row mat
     | idx == 0 = row <-> down
     | idx == (nrows mat) - 1 = up <-> row
@@ -103,23 +103,23 @@ setRow' idx row mat
 
 -- | Lens for accessing elements
 
-elemAt :: (Int, Int) -> Lens' (Matrix a) a
+elemAt :: (Int, Int) -> Lens' (M.Matrix a) a
 elemAt (i, j) = lens (getElem' (i,j)) (\m x -> setElem' x (i,j) m) 
 
-getElem' :: (Int, Int) -> Matrix a -> a
+getElem' :: (Int, Int) -> M.Matrix a -> a
 getElem' (row, col) = getElem (row+1) (col+1)
 
-setElem' :: a -> (Int, Int) -> Matrix a -> Matrix a
+setElem' :: a -> (Int, Int) -> M.Matrix a -> M.Matrix a
 setElem' elem (row, col) mat
     | row < 0 || col < 0 || row >= nrows mat || col >= ncols mat = error ("setElem': Trying to set at (" ++ show row ++ "," ++ show col ++ ") in a " ++ show (nrows mat) ++ "x" ++ show (ncols mat) ++ " matrix.")
     | otherwise = setElem elem (row+1, col+1) mat
 
-mapCol' :: (Int -> a -> a) -> Int -> Matrix a -> Matrix a
+mapCol' :: (Int -> a -> a) -> Int -> M.Matrix a -> M.Matrix a
 mapCol' f col m
     | col < 0 || col > (ncols m)-1 = error "mapCol': index out of bounds" 
     | otherwise = mapCol f (col+1) m
 
-mapRow' :: (Int -> a -> a) -> Int -> Matrix a -> Matrix a
+mapRow' :: (Int -> a -> a) -> Int -> M.Matrix a -> M.Matrix a
 mapRow' f row m
     | row < 0 || row > (nrows m)-1 = error "mapCol': index out of bounds" 
     | otherwise = mapRow f (row+1) m
@@ -127,11 +127,11 @@ mapRow' f row m
 
 
 
-getOptimumVertex :: Matrix Rational -> Col -> Maybe Vertex
+getOptimumVertex :: M.Matrix Rational -> Col -> Maybe Vertex
 getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
     where
         problem = Maximize $ replicate (ncols mat) (-1)
-        constraints = Dense $ safeZipWith (:<=:) (map (map fromRational) $ toLists mat) (map fromRational $ concat $ toLists col)
+        constraints = Dense $ safeZipWith (:<=:) (map (map fromRational) $ M.toLists mat) (map fromRational $ concat $ M.toLists col)
         result = exact problem constraints (map Free [1..ncols mat])
         feasNOpt (Optimal (_, vertex)) = Just vertex
         feasNOpt _ = Nothing
@@ -148,15 +148,21 @@ getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
  -}
 
 
-findBasis :: (Maybe (Matrix Rational), Maybe (Matrix Rational)) -> Matrix Rational -> Int -> (Maybe (Matrix Rational), Maybe (Matrix Rational))
+toHMatrix :: M.Matrix Rational -> HM.Matrix a
+toHMatrix matrix = HM.matrix cols (map (fromRational) (concat $ concat $ M.toLists matrix))
+    where 
+        cols = ncols matrix
+
+
+
+findBasis :: (Maybe (M.Matrix Rational), Maybe (M.Matrix Rational)) -> M.Matrix Rational -> Int -> (Maybe (M.Matrix Rational), Maybe (M.Matrix Rational))
 findBasis (basic, cobasic) original colNum
-    | colNum > cols = (basic, cobasic)
-    | currRank == candRank = findBasis (basic, newCobasic) original (colNum + 1)
-    | currRank < candRank = findBasis (newBasic, cobasic) original (colNum + 1)
+    | colNum > rows = (basic, cobasic)
+    | currRank == candRank = findBasis (basic, Just newCobasic) original (colNum + 1)
+    | currRank < candRank = findBasis (Just newBasic, cobasic) original (colNum + 1)
     where
-        rows = nrows 
-        cols = ncols 
-        currRank = rank basic
+        rows = nrows original
+        currRank = if isNothing basic then 0 else rank (toHMatrix $ fromJust basic)
         candVec = original ^. colAt colNum
         candMat = basic <|> candVec
         candRank = rank candMat
@@ -166,15 +172,15 @@ findBasis (basic, cobasic) original colNum
 
 
 
-sortSystem :: Matrix Rational -> (Matrix Rational, Matrix Rational) 
+sortSystem :: M.Matrix Rational -> (M.Matrix Rational, M.Matrix Rational) 
 sortSystem matrix = (,) <$> (fromJust . fst) <*> (fromJust . snd) (findBasis (Nothing, Nothing) matrix 0)
--- sortSystem :: Matrix Rational -> Col -> Vertex -> (Matrix Rational, Col)
+-- sortSystem :: M.Matrix Rational -> Col -> Vertex -> (M.Matrix Rational, Col)
 
 -- sortSystem mat col vertex
 --     | cols /=  (rows `div` 2) = (,) mat col
---     | otherwise = (trace $ show $ fromLists (upper ++ lower)) (,) (fromLists (upper ++ lower)) col
+--     | otherwise = (trace $ show $ M.fromLists (upper ++ lower)) (,) (M.fromLists (upper ++ lower)) col
 --     where
---         matLists = toLists mat
+--         matLists = M.toLists mat
         
 --         rows = nrows mat
 --         cols = ncols mat
@@ -213,7 +219,7 @@ sortSystem matrix = (,) <$> (fromJust . fst) <*> (fromJust . snd) (findBasis (No
 
 
 -- | Constructs initial dictionary given a set of inequalities and an optimum initial vertex
-getDictionary :: Matrix Rational -> Col -> Vertex -> Dictionary
+getDictionary :: M.Matrix Rational -> Col -> Vertex -> Dictionary
 getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
     where
         -- (newA, newb) = sortSystem _A b vertex
@@ -257,9 +263,9 @@ lexMinRatio dictionary s
         dictMatrix = dictionary^.dict
         col_s = dictMatrix ^. colAt s
         _D = (dictMatrix ^. colAt (cols-1)) <|> submatrix' (0,rows-1) (0, rows-1) dictMatrix
-        slice_s = (concat.toLists) $ submatrix' (dim+1, rows-1) (0,0) col_s
+        slice_s = (concat.M.toLists) $ submatrix' (dim+1, rows-1) (0,0) col_s
         indexed_s = filter (snd.(fmap (>0))) $ safeZipWith (,) [dim+1..rows-1] slice_s 
-        sub_D = map (head . toLists . (\i -> _D ^. rowAt i) . fst) indexed_s
+        sub_D = map (head . M.toLists . (\i -> _D ^. rowAt i) . fst) indexed_s
         ratios = safeZipWith (map $) (map ((flip (/)) . snd) indexed_s) sub_D
 
 
@@ -309,7 +315,7 @@ reverseRS dictionary v
         u = lexMinRatio dictionary v
         i = fromJust $ elemIndex u (dictionary ^. _B)
         w_row_i = mapRow' (\_ x -> (v_col ^. elemAt (0,0))/(v_col ^. elemAt (i,0)) * x) 0 $ dictMatrix ^. rowAt (i)
-        diff_ws = (head.toLists) $ w_row_0 - w_row_i
+        diff_ws = (head.M.toLists) $ w_row_0 - w_row_i
         lastCondition = all (>=0) [(diff_ws!!j)| j <- dictionary^._N , j < u]
         conditions = (w_row_0 ^. elemAt (0,v)) > 0  && u /= 0  && lastCondition 
 
@@ -333,7 +339,7 @@ reverseRS dictionary v
 
 
 getVertex :: Dictionary -> Vertex
-getVertex dictionary = concat $ toLists $ submatrix' (1,dim) (cols-1, cols-1) (dictionary^.dict)
+getVertex dictionary = concat $ M.toLists $ submatrix' (1,dim) (cols-1, cols-1) (dictionary^.dict)
     where
         rows = numRows dictionary
         cols = numCols dictionary
@@ -366,38 +372,38 @@ hasRay dictionary = rays
         rows = numRows dictionary
         dim = cols - rows - 1
         cols = numCols dictionary
-        nonPositive column = all (<=0) ((concat.toLists) column)
+        nonPositive column = all (<=0) ((concat.M.toLists) column)
         colsWithRays = if dim+1 == rows then
                             [dictMatrix^.colAt j | j <- [rows..cols-2]]
                         else [dictMatrix^.colAt j | j <- [rows..cols-2], nonPositive (submatrix' (dim+1,rows-1) (j,j) dictMatrix )]
-        rays =  map (concat . toLists . (submatrix' (1,dim) (0,0))) colsWithRays
+        rays =  map (concat . M.toLists . (submatrix' (1,dim) (0,0))) colsWithRays
 
 
 -- | Implementation of Lexicographic Reverse Search
-lrs :: Matrix Rational -> Col -> Vertex-> [Vertex]
+lrs :: M.Matrix Rational -> Col -> Vertex-> [Vertex]
 lrs matrix b vertex = (sort.nub) $ revSearch dictionary
     where
         dictionary = getDictionary matrix b vertex
 
 
 -- | Transforms a V polytope into a H pointed cone
-polytope2LiftedCone :: [Vertex] -> (Matrix Rational, Col)
+polytope2LiftedCone :: [Vertex] -> (M.Matrix Rational, Col)
 polytope2LiftedCone points = (colOnes <|> hMatrix , colZeros)
     where
         nrows = length points
         colOnes = colFromList $ replicate nrows 1
-        hMatrix = fromLists points
+        hMatrix = M.fromLists points
         colZeros = colFromList $ replicate nrows 0
 
 -- | Transforms a V pointed cone into a H polyotpe
-liftedCone2polyotpe :: [Vertex] -> (Matrix Rational, Col)
+liftedCone2polyotpe :: [Vertex] -> (M.Matrix Rational, Col)
 liftedCone2polyotpe points = (hMatrix, b)
     where
         b = colFromList $ map (negate.head) points
-        hMatrix = fromLists $ map tail points 
+        hMatrix = M.fromLists $ map tail points 
     
 -- | Implementation of Lexicographic Reverse Search for Facet Enumeration
-lrsFacetEnumeration :: [IVertex] -> (Matrix Rational, Col)
+lrsFacetEnumeration :: [IVertex] -> (M.Matrix Rational, Col)
 lrsFacetEnumeration ipoints = hPolytope
     where
         points =  map (map toRational) ipoints
