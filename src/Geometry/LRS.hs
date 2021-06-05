@@ -148,8 +148,8 @@ getOptimumVertex mat col = fmap (map toRational) $ feasNOpt result
  -}
 
 
-toHMatrix :: M.Matrix Rational -> HM.Matrix a
-toHMatrix matrix = HM.matrix cols (map (fromRational) (concat $ concat $ M.toLists matrix))
+toHMatrix :: M.Matrix Rational -> HM.Matrix Double
+toHMatrix matrix = HM.matrix cols (map (fromRational) (concat $ M.toLists matrix))
     where 
         cols = ncols matrix
 
@@ -164,16 +164,16 @@ findBasis (basic, cobasic) original colNum
         rows = nrows original
         currRank = if isNothing basic then 0 else rank (toHMatrix $ fromJust basic)
         candVec = original ^. colAt colNum
-        candMat = basic <|> candVec
-        candRank = rank candMat
+        candMat = (fromJust basic) <|> candVec
+        candRank = rank $ toHMatrix candMat
 
-        newBasic = if isNothing basic then candVec else basic <|> candVec
-        newCobasic = if isNothing cobasic then candVec else cobasic <|> candVec
+        newBasic = if isNothing basic then candVec else (fromJust basic) <|> candVec
+        newCobasic = if isNothing cobasic then candVec else (fromJust cobasic) <|> candVec
 
 
 
 sortSystem :: M.Matrix Rational -> (M.Matrix Rational, M.Matrix Rational) 
-sortSystem matrix = (,) <$> (fromJust . fst) <*> (fromJust . snd) (findBasis (Nothing, Nothing) matrix 0)
+sortSystem matrix = ((,) <$> (fromJust . fst) <*> (fromJust . snd)) (findBasis (Nothing, Nothing) matrix 0)
 -- sortSystem :: M.Matrix Rational -> Col -> Vertex -> (M.Matrix Rational, Col)
 
 -- sortSystem mat col vertex
@@ -219,9 +219,35 @@ sortSystem matrix = (,) <$> (fromJust . fst) <*> (fromJust . snd) (findBasis (No
 
 
 -- | Constructs initial dictionary given a set of inequalities and an optimum initial vertex
+-- getDictionary :: M.Matrix Rational -> Col -> Vertex -> Dictionary
+-- getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
+--     where
+--         -- (newA, newb) = sortSystem _A b vertex
+--         initialDict = _A <|> slack
+--         (basic, cobasic) = sortSystem initialDict
+--         (newA, newb) = (,) _A b
+--         rows = nrows newA
+--         cols = ncols newA
+--         slack = identity rows
+--         dictionary = newA <|> slack
+--         topRow = rowFromList $ 1 :  replicate rows 0 ++  replicate cols 1
+--         c_B = submatrix' (0,0) (1,rows) topRow
+--         c_N = submatrix' (0,0) (rows+1, rows+cols) topRow
+--         _A_B = submatrix' (0,rows-1) (0,rows-1) dictionary
+--         _A_N = submatrix' (0,rows-1) (rows, rows+cols-1) dictionary
+--         Right invA_B = inverse _A_B
+--         p21 = (c_N - c_B |*| invA_B |*| _A_N)
+--         p22 = invA_B |*| _A_N
+--         p31 = -c_B |*| invA_B |*| newb
+--         p32 = invA_B |*| newb
+
+--         newDict = ((identity (rows+1)) <|> (p21 <-> p22) <|> (p31 <-> p32))
+
+
 getDictionary :: M.Matrix Rational -> Col -> Vertex -> Dictionary
 getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
     where
+
         -- (newA, newb) = sortSystem _A b vertex
         initialDict = _A <|> slack
         (basic, cobasic) = sortSystem initialDict
@@ -233,8 +259,8 @@ getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
         topRow = rowFromList $ 1 :  replicate rows 0 ++  replicate cols 1
         c_B = submatrix' (0,0) (1,rows) topRow
         c_N = submatrix' (0,0) (rows+1, rows+cols) topRow
-        _A_B = submatrix' (0,rows-1) (0,rows-1) dictionary
-        _A_N = submatrix' (0,rows-1) (rows, rows+cols-1) dictionary
+        _A_B = basic --submatrix' (0,rows-1) (0,rows-1) dictionary
+        _A_N = cobasic --submatrix' (0,rows-1) (rows, rows+cols-1) dictionary
         Right invA_B = inverse _A_B
         p21 = (c_N - c_B |*| invA_B |*| _A_N)
         p22 = invA_B |*| _A_N
@@ -242,6 +268,7 @@ getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
         p32 = invA_B |*| newb
 
         newDict = ((identity (rows+1)) <|> (p21 <-> p22) <|> (p31 <-> p32))
+
 
 enteringVariable :: Dictionary -> Maybe Int
 enteringVariable dictionary

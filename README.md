@@ -1,6 +1,9 @@
 # Dependencies
-    sudo apt-get install glpk-utils libglpk-dev glpk-doc
+## Ubuntu
+* __GLPK__: `sudo apt-get install glpk-utils libglpk-dev glpk-doc`
 
+## MacOS
+* __GLPK__: `brew install glpk`
 # facet-enumeration
 
 
