@@ -157,14 +157,14 @@ toHMatrix matrix = HM.matrix cols (map (fromRational) (concat $ M.toLists matrix
 
 findBasis :: (Maybe (M.Matrix Rational), Maybe (M.Matrix Rational)) -> M.Matrix Rational -> Int -> (Maybe (M.Matrix Rational), Maybe (M.Matrix Rational))
 findBasis (basic, cobasic) original colNum
-    | colNum > rows = (basic, cobasic)
+    | colNum > rows = (basic, Just ((fromJust cobasic) <|> (submatrix' (0,rows-1) (colNum, (ncols original)-1) original)) )
     | currRank == candRank = findBasis (basic, Just newCobasic) original (colNum + 1)
     | currRank < candRank = findBasis (Just newBasic, cobasic) original (colNum + 1)
     where
         rows = nrows original
         currRank = if isNothing basic then 0 else rank (toHMatrix $ fromJust basic)
         candVec = original ^. colAt colNum
-        candMat = (fromJust basic) <|> candVec
+        candMat = if isNothing basic then candVec else (fromJust basic) <|> candVec
         candRank = rank $ toHMatrix candMat
 
         newBasic = if isNothing basic then candVec else (fromJust basic) <|> candVec
