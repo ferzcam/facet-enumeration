@@ -157,7 +157,7 @@ toHMatrix matrix = HM.matrix cols (map (fromRational) (concat $ M.toLists matrix
 
 findBasis :: (Maybe (M.Matrix Rational), Maybe (M.Matrix Rational)) -> M.Matrix Rational -> Int -> (Maybe (M.Matrix Rational), Maybe (M.Matrix Rational))
 findBasis (basic, cobasic) original colNum
-    | colNum > rows = (basic, Just ((fromJust cobasic) <|> (submatrix' (0,rows-1) (colNum, (ncols original)-1) original)) )
+    | currRank == rows = (basic, Just ((fromJust cobasic) <|> (submatrix' (0,rows-1) (colNum, (ncols original)-1) original)) )
     | currRank == candRank = findBasis (basic, Just newCobasic) original (colNum + 1)
     | currRank < candRank = findBasis (Just newBasic, cobasic) original (colNum + 1)
     where
@@ -173,7 +173,7 @@ findBasis (basic, cobasic) original colNum
 
 
 sortSystem :: M.Matrix Rational -> (M.Matrix Rational, M.Matrix Rational) 
-sortSystem matrix = ((,) <$> (fromJust . fst) <*> (fromJust . snd)) (findBasis (Nothing, Nothing) matrix 0)
+sortSystem matrix = trace ("Matrix : "++ show matrix ++ "\n\nSorted " ++ show (findBasis (Nothing, Nothing) matrix 0) ) (((,) <$> (fromJust . fst) <*> (fromJust . snd)) (findBasis (Nothing, Nothing) matrix 0))
 -- sortSystem :: M.Matrix Rational -> Col -> Vertex -> (M.Matrix Rational, Col)
 
 -- sortSystem mat col vertex
