@@ -392,7 +392,7 @@ revSearch dictionary@(Dict _B _N dictMatrix) -- = getVertex dictionary : concatM
 
 
 hasRay :: Dictionary -> [Vertex]
-hasRay dictionary = rays
+hasRay dictionary = trace ("RAYS: " ++ show (map snd rays) ++ "\n\n" ++ show (map fst rays) ++ "\n" ++ show (dictionary ^. dict) ++ "\n\n") (map snd rays)
     -- idxsPivot == Nothing = Nothing
     -- r == 0 = Just ray
     -- otherwise = Nothing
@@ -403,16 +403,16 @@ hasRay dictionary = rays
         cols = numCols dictionary
         nonPositive column = all (<=0) ((concat.M.toLists) column)
         colsWithRays = if dim+1 == rows then
-                            [dictMatrix^.colAt j | j <- [rows..cols-2]]
-                        else [dictMatrix^.colAt j | j <- [rows..cols-2], nonPositive (submatrix' (dim+1,rows-1) (j,j) dictMatrix )]
-        rays =  map (concat . M.toLists . (submatrix' (1,dim) (0,0))) colsWithRays
+                            [(j, dictMatrix^.colAt j) | j <- [rows..cols-2]]
+                        else [(j, dictMatrix^.colAt j) | j <- [rows..cols-2], nonPositive (submatrix' (dim+1,rows-1) (j,j) dictMatrix )]
+        rays =  zip (map fst colsWithRays) (map (concat . M.toLists . (submatrix' (1,dim) (0,0)) . snd ) colsWithRays)
 
 
 -- | Implementation of Lexicographic Reverse Search
 lrs :: M.Matrix Rational -> Col -> Vertex-> [Vertex]
 lrs matrix b vertex = (sort.nub) $ revSearch dictionary
     where
-        dictionary = getDictionary matrix b vertex
+        dictionary = simplex $ getDictionary matrix b vertex
 
 
 -- | Transforms a V polytope into a H pointed cone
@@ -428,8 +428,10 @@ polytope2LiftedCone points = (colOnes <|> hMatrix , colZeros)
 liftedCone2polyotpe :: [Vertex] -> (M.Matrix Rational, Col)
 liftedCone2polyotpe points = (hMatrix, b)
     where
-        b = colFromList $ map (negate.head) points
-        hMatrix = M.fromLists $ map tail points 
+        dim = length (points !! 0)
+        rays  = points \\ [(replicate dim 0)] -- remove vertex at the origin
+        b = colFromList $ map (negate.head) rays
+        hMatrix = M.fromLists $ map tail rays 
     
 -- | Implementation of Lexicographic Reverse Search for Facet Enumeration
 lrsFacetEnumeration :: [IVertex] -> (M.Matrix Rational, Col)
