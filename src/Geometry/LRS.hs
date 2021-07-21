@@ -275,16 +275,17 @@ getDictionary _A b vertex = Dict [0..rows] [rows+1..rows+cols] newDict
 enteringVariable :: Dictionary -> Maybe Int
 enteringVariable dictionary
     | null negs = Nothing
-    | otherwise = Just $ (fst.head.sort) negs
+    | otherwise = trace ("ENTERINGVAR\nBASE: " ++ show (dictionary^._B) ++ "\nCOBASE: " ++ show (dictionary^._N))  (Just $ (fst.head.sort) negs)
     where
-        cobasic_0 = zip (dictionary^._N) (map (\j -> dictionary^.dict.elemAt (0,j)) (dictionary^._N))
+        rows = nrows $ dictionary^.dict
+        cobasic_0 = zip (dictionary^._N) (map (\j -> dictionary^.dict.elemAt (0,j)) [rows..])
         negs = filter (\(_,value) -> value < 0) cobasic_0
 
 lexMinRatio :: Dictionary -> Int -> Int
 lexMinRatio dictionary s
     | dim+1 == rows = 0
     | null indexed_s = 0
-    | otherwise = (dictionary ^. _B) !! (fst $ indexed_s !! (fromJust $ elemIndex (minimum ratios) ratios))
+    | otherwise = trace ("LEXMINRATIO\nBASE: " ++ show (dictionary^._B) ++ "\nCOBASE: " ++ show (dictionary^._N))  (dictionary ^. _B) !! (fst $ indexed_s !! (fromJust $ elemIndex (minimum ratios) ratios))
     where
         rows = numRows dictionary
         cols = numCols dictionary
@@ -335,18 +336,21 @@ reverseRS ::
     ->  Int          -- ^ element in N
     ->  Maybe Int
 reverseRS dictionary v
-    | conditions == False = Nothing
-    | conditions == True = Just u
+    | conditions == False = trace ("REVERSE RS: " ++ show [firstCondition, sndCondition, lastCondition]) Nothing
+    | conditions == True = trace ("REVERSE RS: " ++ show v) Just u
     where
         dictMatrix = dictionary^.dict
+        rows = nrows dictMatrix
         v_col = dictMatrix ^. colAt (v)
         w_row_0 = dictMatrix ^. rowAt 0
         u = lexMinRatio dictionary v
         i = fromJust $ elemIndex u (dictionary ^. _B)
         w_row_i = mapRow' (\_ x -> (v_col ^. elemAt (0,0))/(v_col ^. elemAt (i,0)) * x) 0 $ dictMatrix ^. rowAt (i)
         diff_ws = (head.M.toLists) $ w_row_0 - w_row_i
-        lastCondition = all (>=0) [(diff_ws!!j)| j <- dictionary^._N , j < u]
-        conditions = (w_row_0 ^. elemAt (0,v)) > 0  && u /= 0  && lastCondition 
+        firstCondition = (w_row_0 ^. elemAt (0,v)) > 0
+        sndCondition = u /= 0 
+        lastCondition = all (>=0) [(diff_ws!!(snd idx))|idx <- (zip (dictionary^._N) [rows..]), (fst idx) < u ]
+        conditions = firstCondition && sndCondition && lastCondition -- Proposition 6.1
 
 
 
